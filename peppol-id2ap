@@ -1,0 +1,122 @@
+#!/usr/bin/env ruby 
+
+# == Synopsis 
+#   Given a Participant ID obtains its Access Point URL(s) 
+#
+# == Examples
+#   peppol-id2url 9906:05359681003
+#
+# == Usage 
+#   peppol-id2url [options] participant_id [doc_type]
+#
+#   For help use: peppol-id2url -h
+#
+# == Options
+#   -h, --help          Displays help message
+#   -v, --verbose       Show some additional output 
+#
+# == Author
+#   Ingent Grups Systems SL
+
+require 'optparse'
+require 'ostruct'
+require 'rdoc/usage'
+require "md5"
+require "rexml/document"
+require "uri"
+require "open-uri"
+
+class App
+  VERSION = '0.1'
+  URLPREFIX="B-"
+  URLSUFFIX=".iso6523-actorid-upis.sml.peppolcentral.org/iso6523-actorid-upis::"
+
+  attr_reader :options
+
+  def initialize(arguments, stdin)
+    @arguments = arguments
+    @stdin = stdin
+    @options = OpenStruct.new
+    @options.verbose = false
+  end
+  
+  def run
+    if parsed_options? && arguments_valid? 
+      process_arguments            
+      process_command
+    else
+      output_usage
+    end     
+  end
+  
+  protected
+  
+  def parsed_options?
+    # Specify options
+    opts = OptionParser.new 
+    opts.on('-v', '--verbose')    { @options.verbose = true }
+    opts.on('-h', '--help')       { output_help }
+    opts.parse!(@arguments) rescue return false
+    true      
+  end
+
+  # True if required arguments were provided
+  def arguments_valid?
+    true if @arguments.length >= 1
+  end
+  
+  # Setup the arguments
+  def process_arguments
+    @part_id = @arguments[0]
+    @doc_type = @arguments[1]
+  end
+  
+  def output_help
+    output_version
+    RDoc::usage()
+  end
+  
+  def output_usage
+    RDoc::usage('usage') # gets usage from comments above
+  end
+  
+  def output_version
+    puts "#{File.basename(__FILE__)} version #{VERSION}"
+  end
+
+  def bye(m)
+    puts m
+    exit
+  end
+  
+  def process_command
+    url1 = "http://#{URLPREFIX}#{MD5.new(@part_id)}#{URLSUFFIX}#{@part_id}"
+    puts "SMP=#{url1}" if @options.verbose 
+    xml = open(url1).read rescue bye("Can not find Participant ID '#{@part_id}'")
+    doc = REXML::Document.new(xml)
+    xpath = "/ns2:ServiceGroup/ns2:ServiceMetadataReferenceCollection/"
+    element = REXML::XPath.first(doc, xpath)
+    bye "Can not find ServiceMetadataReferenceCollection" if element.nil?
+    url2 = []
+    element.elements.each do |el|
+        url2 << URI.decode(el.attributes["href"]) if @doc_type and URI.decode(el.attributes["href"]) =~ /#{@doc_type}/i or !@doc_type
+    end
+    url2.each do |u|
+      puts "SMR=#{u}" if @options.verbose 
+      xml2 = open(URI.encode(u)).read rescue bye("Can not open URL #{u}")
+      xpath = "/ns3:SignedServiceMetadata/ns3:ServiceMetadata/ns3:ServiceInformation/ns3:ProcessList/ns3:Process/ns3:ServiceEndpointList/ns3:Endpoint/ns2:EndpointReference/ns2:Address/"
+      doc = REXML::Document.new(xml2)
+      element = REXML::XPath.first(doc, xpath)
+      bye "Can not find EndpointReference" if element.nil?
+      ap = element.text
+      puts "AP = #{element.text}"
+      puts "     accepts #{u.gsub(/^http.*::urn:/,"urn::")}"
+    end
+  end
+end
+
+
+# Create and run the application
+app = App.new(ARGV, STDIN)
+app.run
+

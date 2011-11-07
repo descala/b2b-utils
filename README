@@ -1,0 +1,4 @@
+B2B Utilities
+=============
+facturae-validate-invoice - Facturae validation via mityc.es web tool. Uses web scrapping
+peppol-id2ap              - Given a PEPPOL Participant ID obtains its Access Point URL(s) 
