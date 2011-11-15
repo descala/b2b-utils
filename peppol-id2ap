@@ -67,7 +67,7 @@ class App
   
   # Setup the arguments
   def process_arguments
-    @part_id = @arguments[0]
+    @part_id = @arguments[0].downcase
     @doc_type = @arguments[1]
   end
   
