@@ -16,7 +16,7 @@
 #   -v, --verbose       Show some additional output 
 #
 # == Author
-#   Ingent Grups Systems SL
+#   Ingent Grup Systems SL
 
 require 'optparse'
 require 'ostruct'
