@@ -67,7 +67,7 @@ class App
   
   # Setup the arguments
   def process_arguments
-    @part_id = @arguments[0].downcase
+    @part_id = @arguments[0]
     @doc_type = @arguments[1]
   end
   
@@ -90,7 +90,7 @@ class App
   end
   
   def process_command
-    url1 = "http://#{URLPREFIX}#{MD5.new(@part_id)}#{URLSUFFIX}#{@part_id}"
+    url1 = "http://#{URLPREFIX}#{MD5.new(@part_id.downcase)}#{URLSUFFIX}#{@part_id}"
     puts "SMP=#{url1}" if @options.verbose 
     xml = open(url1).read rescue bye("Can not find Participant ID '#{@part_id}'")
     doc = REXML::Document.new(xml)
