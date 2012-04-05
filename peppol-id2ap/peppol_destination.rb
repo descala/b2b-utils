@@ -41,6 +41,7 @@ class PeppolDestination
     element.each_element do |el|
       smr_urls << URI.decode(el.attributes["href"]) if @document_id and URI.decode(el.attributes["href"]) =~ /#{@document_id}/i or !@document_id
     end
+    bye "Can not find Document ID" if smr_urls.empty?
 
     # Filter APs by @process_id
     access_points = []
@@ -50,17 +51,18 @@ class PeppolDestination
       xpath = "/ns3:SignedServiceMetadata/ns3:ServiceMetadata/ns3:ServiceInformation/ns3:ProcessList/ns3:Process"
       doc = REXML::Document.new(signed_service_metadata)
       REXML::XPath.each(doc, xpath) do |process|
-        process_id = process.elements['ProcessIdentifier'].text
-        if process_id =~ /#{@process_id}/i or !@process_id
+        proc_id = process.elements['ProcessIdentifier'].text
+        if proc_id =~ /#{@process_id}/i or !@process_id
           ap = {}
           ap[:url] = process.elements["ns3:ServiceEndpointList/ns3:Endpoint/ns2:EndpointReference/ns2:Address"].text
           bye "Can not find EndpointReference" if ap[:url].nil?
           ap[:document_id] = smr_url.gsub(/^http.*::urn:/,"urn:")
-          ap[:process_id] = process_id
+          ap[:process_id] = proc_id
           access_points << ap
         end
       end
     end
+    bye "Can not find Process ID" if access_points.empty?
     return access_points
   end
 

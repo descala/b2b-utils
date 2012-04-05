@@ -82,7 +82,7 @@ class App
 
   def process_command
     begin
-      pd = PeppolDestination.new(@participant_id,@document_id,@proces_id)
+      pd = PeppolDestination.new(@participant_id,@document_id,@process_id)
       pd.verbose = @options.verbose
       aps = pd.access_points
       puts "Can not find any matching AP" if aps.empty?
