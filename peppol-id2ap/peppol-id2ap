@@ -7,7 +7,7 @@
 #   peppol-id2url 9906:05359681003
 #
 # == Usage 
-#   peppol-id2url [options] participant_id [doc_type]
+#   peppol-id2url [options] participant_id [document_id] [process_id]
 #
 #   For help use: peppol-id2url -h
 #
@@ -21,15 +21,10 @@
 require 'optparse'
 require 'ostruct'
 require 'rdoc/usage'
-require "md5"
-require "rexml/document"
-require "uri"
-require "open-uri"
+require "peppol_destination"
 
 class App
   VERSION = '0.1'
-  URLPREFIX="B-"
-  URLSUFFIX=".iso6523-actorid-upis.sml.peppolcentral.org/iso6523-actorid-upis::"
 
   attr_reader :options
 
@@ -67,8 +62,9 @@ class App
   
   # Setup the arguments
   def process_arguments
-    @part_id = @arguments[0]
-    @doc_type = @arguments[1]
+    @participant_id = @arguments[0]
+    @document_id = @arguments[1]
+    @process_id = @arguments[2]
   end
   
   def output_help
@@ -84,33 +80,19 @@ class App
     puts "#{File.basename(__FILE__)} version #{VERSION}"
   end
 
-  def bye(m)
-    puts m
-    exit
-  end
-  
   def process_command
-    url1 = "http://#{URLPREFIX}#{MD5.new(@part_id.downcase)}#{URLSUFFIX}#{@part_id}"
-    puts "SMP=#{url1}" if @options.verbose 
-    xml = open(url1).read rescue bye("Can not find Participant ID '#{@part_id}'")
-    doc = REXML::Document.new(xml)
-    xpath = "/ns2:ServiceGroup/ns2:ServiceMetadataReferenceCollection/"
-    element = REXML::XPath.first(doc, xpath)
-    bye "Can not find ServiceMetadataReferenceCollection" if element.nil?
-    url2 = []
-    element.elements.each do |el|
-        url2 << URI.decode(el.attributes["href"]) if @doc_type and URI.decode(el.attributes["href"]) =~ /#{@doc_type}/i or !@doc_type
-    end
-    url2.each do |u|
-      puts "SMR=#{u}" if @options.verbose 
-      xml2 = open(URI.encode(u)).read rescue bye("Can not open URL #{u}")
-      xpath = "/ns3:SignedServiceMetadata/ns3:ServiceMetadata/ns3:ServiceInformation/ns3:ProcessList/ns3:Process/ns3:ServiceEndpointList/ns3:Endpoint/ns2:EndpointReference/ns2:Address/"
-      doc = REXML::Document.new(xml2)
-      element = REXML::XPath.first(doc, xpath)
-      bye "Can not find EndpointReference" if element.nil?
-      ap = element.text
-      puts "AP = #{element.text}"
-      puts "     accepts #{u.gsub(/^http.*::urn:/,"urn::")}"
+    begin
+      pd = PeppolDestination.new(@participant_id,@document_id,@proces_id)
+      pd.verbose = @options.verbose
+      aps = pd.access_points
+      puts "Can not find any matching AP" if aps.empty?
+      aps.each do |ap|
+        puts "AP = #{ap[:url]}"
+        puts "     accepts document_id #{ap[:document_id]}" unless @document_id
+        puts "     accepts process_id  #{ap[:process_id]} " unless @process_id
+      end
+    rescue Exception => e
+      puts "Error: #{e.message}"
     end
   end
 end
