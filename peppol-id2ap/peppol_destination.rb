@@ -32,7 +32,7 @@ class PeppolDestination
     # Open SMP url and obtain a list of SMRs
     xml = open(smp_url).read rescue bye("Can not find Participant ID '#{@participant_id}'")
     doc = REXML::Document.new(xml)
-    xpath = "/ns2:ServiceGroup/ns2:ServiceMetadataReferenceCollection/"
+    xpath = "//ns2:ServiceMetadataReferenceCollection/"
     element = REXML::XPath.first(doc, xpath)
     bye "Can not find ServiceMetadataReferenceCollection in #{smp_url}" if element.nil?
 
